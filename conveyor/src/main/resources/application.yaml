@@ -1,0 +1,19 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: conveyor
+
+loan:
+  global-rate: 21
+  insurance-price: 100000
+  insurance-rate: 2
+  salary-rate: 1
+
+logging:
+  level:
+    root: info
+    org.springframework: info
