@@ -41,9 +41,4 @@ public class CreditConveyorController {
         Credit credit = creditService.scoringLoan(scoringDataMapper.toEntity(dto));
         return creditMapper.toDto(credit);
     }
-
-    @GetMapping("rofl")
-    public void rofl() {
-      log.warn("Rofl is here.");
-    }
 }
