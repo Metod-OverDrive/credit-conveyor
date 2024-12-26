@@ -17,3 +17,12 @@ logging:
   level:
     root: info
     org.springframework: info
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
+  endpoint:
+    health:
+      show-details: always

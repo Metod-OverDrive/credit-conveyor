@@ -10,6 +10,12 @@
                 <message/>
                 <context/>
                 <stackTrace/>
+                <mdc/>
+                <pattern>
+                    {
+                    "serviceName": "my-service-name"
+                    }
+                </pattern>
             </providers>
         </encoder>
     </appender>
