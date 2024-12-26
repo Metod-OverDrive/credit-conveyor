@@ -1,0 +1,36 @@
+version: '3'
+
+networks:
+  credit_conveyor:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+services:
+  prometheus:
+    image: prom/prometheus:v3.0.1
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - credit_conveyor
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - credit_conveyor
+    volumes:
+      - grafana-data:/var/lib/grafana
