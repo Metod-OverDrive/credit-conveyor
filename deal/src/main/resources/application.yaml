@@ -18,5 +18,19 @@ spring:
     enabled: true
     default-schema: ${POSTGRES_SCHEMA}
 
+logging:
+  level:
+    root: info
+    org.springframework: info
+
 url:
   conveyor: ${URL_CONVEYOR}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
+  endpoint:
+    health:
+      show-details: always
