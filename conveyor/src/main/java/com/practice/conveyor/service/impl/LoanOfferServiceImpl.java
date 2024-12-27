@@ -1,5 +1,6 @@
 package com.practice.conveyor.service.impl;
 
+import com.practice.conveyor.config.properties.LoanProperties;
 import com.practice.conveyor.model.LoanApplication;
 import com.practice.conveyor.model.LoanOffer;
 import com.practice.conveyor.service.LoanOfferService;
@@ -17,16 +18,8 @@ import java.math.RoundingMode;
 @Slf4j
 public class LoanOfferServiceImpl implements LoanOfferService {
 
-    @Value("${loan.global-rate}")
-    private Integer GLOBAL_RATE;
-    @Value("${loan.insurance-price}")
-    private BigDecimal INSURANCE_PRICE;
-    @Value("${loan.insurance-rate}")
-    private Integer INSURANCE_RATE;
-    @Value("${loan.salary-rate}")
-    private Integer SALARY_CLIENT_RATE;
-
     private final LoanCalcUtil loanCalcUtil;
+    private final LoanProperties loanProperties;
 
     @Override
     public LoanOffer preScoringLoan(LoanApplication application) {
@@ -60,27 +53,27 @@ public class LoanOfferServiceImpl implements LoanOfferService {
     }
 
     private BigDecimal calcRate(Boolean isInsuranceEnabled, Boolean isSalaryClient) {
-        BigDecimal monthlyPayment = new BigDecimal(GLOBAL_RATE);
+        BigDecimal monthlyPayment = new BigDecimal(loanProperties.getGlobalRate());
 
         if (isInsuranceEnabled && isSalaryClient) {
             monthlyPayment = monthlyPayment
-                    .subtract(new BigDecimal(INSURANCE_RATE))
-                    .subtract(new BigDecimal(SALARY_CLIENT_RATE));
+                    .subtract(new BigDecimal(loanProperties.getInsuranceRate()))
+                    .subtract(new BigDecimal(loanProperties.getSalaryRate()));
 
         } else if (isInsuranceEnabled) {
             monthlyPayment = monthlyPayment
-                    .subtract(new BigDecimal(INSURANCE_RATE));
+                    .subtract(new BigDecimal(loanProperties.getInsuranceRate()));
 
         } else if (isSalaryClient) {
             monthlyPayment = monthlyPayment
-                    .subtract(new BigDecimal(SALARY_CLIENT_RATE));
+                    .subtract(new BigDecimal(loanProperties.getSalaryRate()));
         }
 
         return monthlyPayment;
     }
 
     private BigDecimal calcAmountWithInsurance(BigDecimal amount, Boolean isInsuranceEnabled) {
-        return isInsuranceEnabled ? amount.add(INSURANCE_PRICE) : amount;
+        return isInsuranceEnabled ? amount.add(loanProperties.getInsurancePrice()) : amount;
     }
 
     private BigDecimal calculateTotalPayment(BigDecimal monthlyPayment, Integer term) {
