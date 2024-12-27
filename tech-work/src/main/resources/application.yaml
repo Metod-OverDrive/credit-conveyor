@@ -1,0 +1,18 @@
+server:
+  port: ${SERVER_PORT}
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: tech-work
+  config:
+    import: optional:file:tech-work/.env[.properties]
+  rabbitmq:
+    host: ${RABBIT_HOST}
+    port: ${RABBIT_PORT}
+    username: ${RABBIT_USERNAME}
+    password: ${RABBIT_PASSWORD}
+
+rabbit-queue:
+  name: ${QUEUE_NAME}
