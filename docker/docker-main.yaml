@@ -1,0 +1,43 @@
+version: '3'
+
+networks:
+  credit_conveyor:
+    driver: bridge
+
+volumes:
+  db-data:
+    driver: local
+  rabbit-data:
+    driver: local
+
+services:
+  db:
+    image: postgres:15.1-alpine
+    container_name: postgres
+    networks:
+      - credit_conveyor
+    env_file: .env
+    environment:
+      - POSTGRES_USER=${POSTGRES_USERNAME}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DATABASE}
+    ports:
+      - ${DB_LOCAL_PORT}:${DB_DOCKER_PORT}
+    volumes:
+      - ../deal/src/main/resources/preliquibase:/docker-entrypoint-initdb.d
+      - db-data:/var/lib/postgresql/data
+
+  RabbitMQ:
+    image: rabbitmq:3-management-alpine
+    networks:
+      - credit_conveyor
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBIT_USERNAME}
+      - RABBITMQ_DEFAULT_PASS=${RABBIT_PASSWORD}
+      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit disk_free_limit 2147483648
+      #- RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit log_levels [{connection,error},{default,error}] disk_free_limit 2147483648
+    volumes:
+      - rabbit-data:/var/lib/rabbitmq
+    ports:
+      - '5672:5672'
+      - '15672:15672'
