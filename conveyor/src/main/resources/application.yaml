@@ -1,22 +1,25 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT}
   servlet:
     context-path: /api
 
 spring:
   application:
     name: conveyor
+  config:
+    import: optional:file:conveyor/.env[.properties]
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: admin
-    password: admin
+    host: ${RABBIT_HOST}
+    port: ${RABBIT_PORT}
+    username: ${RABBIT_USERNAME}
+    password: ${RABBIT_PASSWORD}
 
-loan:
-  global-rate: 21
-  insurance-price: 100000
-  insurance-rate: 2
-  salary-rate: 1
+url:
+  loan-properties: ${URL_LOAN_PROPERTIES}
 
 logging:
   level:

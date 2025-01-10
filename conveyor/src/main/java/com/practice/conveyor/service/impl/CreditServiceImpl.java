@@ -1,16 +1,13 @@
 package com.practice.conveyor.service.impl;
 
-import com.practice.conveyor.model.Credit;
-import com.practice.conveyor.model.Employment;
-import com.practice.conveyor.model.LoanPaymentSchedule;
-import com.practice.conveyor.model.ScoringData;
+import com.practice.conveyor.model.*;
 import com.practice.conveyor.model.enums.EmploymentStatus;
 import com.practice.conveyor.service.CreditService;
+import com.practice.conveyor.service.LoanPropertiesService;
 import com.practice.conveyor.service.utils.LoanCalcUtil;
 import com.practice.conveyor.web.exception.RejectApplicationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -24,33 +21,22 @@ import java.util.*;
 @Slf4j
 public class CreditServiceImpl implements CreditService {
 
-    @Value("${loan.global-rate}")
-    private Integer GLOBAL_RATE;
-
-    private static final long MIN_CLIENT_AGE = 20L;
-    private static final long MAX_CLIENT_AGE = 60L;
-    private static final Integer MIN_TOTAL_WORK_EXPERIENCE = 6;
-    private static final Integer MIN_CURRENT_WORK_EXPERIENCE = 3;
-    private static final BigDecimal SALARY_QUANTITY = new BigDecimal("20");
-    private static final long MIN_MAN_AGE_FOR_SPECIAL_RATE = 30L;
-    private static final long MAX_MAN_AGE_FOR_SPECIAL_RATE = 55L;
-    private static final long MIN_WOMAN_AGE_FOR_SPECIAL_RATE = 35L;
-    private static final long MAX_WOMAN_AGE_FOR_SPECIAL_RATE = 60L;
-    private static final int MONTHLY_PAYMENT_START_DAY = 22;
     private static final String REJECT_APPLICATION = "Отказ: ";
 
+    private final LoanPropertiesService loanPropertiesService;
     private final LoanCalcUtil loanCalcUtil;
 
     @Override
     public Credit scoringLoan(ScoringData data) {
-        checkRejectReasons(data);
+        LoanProperties props = loanPropertiesService.getActualProperties();
+        checkRejectReasons(data, props);
 
         BigDecimal amount = data.getAmount();
         Integer term = data.getTerm();
 
-        BigDecimal rate = calcRate(data);
+        BigDecimal rate = calcRate(data, props);
         BigDecimal monthlyPayment = loanCalcUtil.calculateMonthlyPayment(term, amount, rate);
-        List<LoanPaymentSchedule> paymentSchedules = calcPaymentSchedules(term, amount, rate, monthlyPayment);
+        List<LoanPaymentSchedule> paymentSchedules = calcPaymentSchedules(term, amount, rate, monthlyPayment, props);
         BigDecimal totalAmount = calcTotalAmount(paymentSchedules);
         BigDecimal psk = calculatePsk(totalAmount, amount, term);
 
@@ -70,7 +56,7 @@ public class CreditServiceImpl implements CreditService {
         return credit;
     }
 
-    private void checkRejectReasons(ScoringData data) {
+    private void checkRejectReasons(ScoringData data, LoanProperties props) {
         Employment employment = data.getEmployment();
         LocalDate birthday = data.getBirthday();
 
@@ -82,18 +68,19 @@ public class CreditServiceImpl implements CreditService {
             rejectApplication("client employment INN or position is null.");
         }
 
-        if (employment.getSalary().multiply(SALARY_QUANTITY).compareTo(data.getAmount()) < 0) {
+        if (employment.getSalary().multiply(new BigDecimal(props.getSalaryQuantity()))
+                .compareTo(data.getAmount()) < 0) {
             rejectApplication("Loan amount more than 20 times the client's salary.");
         }
 
-        if (LocalDate.now().minusYears(MIN_CLIENT_AGE).isBefore(birthday)
-                || LocalDate.now().minusYears(MAX_CLIENT_AGE).isAfter(birthday)
-                || LocalDate.now().minusYears(MAX_CLIENT_AGE).equals(birthday)) {
+        if (LocalDate.now().minusYears(props.getMinClientAge()).isBefore(birthday)
+                || LocalDate.now().minusYears(props.getMaxClientAge()).isAfter(birthday)
+                || LocalDate.now().minusYears(props.getMaxClientAge()).equals(birthday)) {
             rejectApplication("Not correct age for this service.");
         }
 
-        if (MIN_TOTAL_WORK_EXPERIENCE > employment.getWorkExperienceTotal()
-            || MIN_CURRENT_WORK_EXPERIENCE > employment.getWorkExperienceCurrent()) {
+        if (props.getMinTotalWorkExperience() > employment.getWorkExperienceTotal()
+            || props.getMinCurrentWorkExperience() > employment.getWorkExperienceCurrent()) {
             rejectApplication("Not correct work experience for this service.");
         }
     }
@@ -104,8 +91,8 @@ public class CreditServiceImpl implements CreditService {
         throw new RejectApplicationException(rejectReason);
     }
 
-    private BigDecimal calcRate(ScoringData data) {
-        BigDecimal rate = new BigDecimal(GLOBAL_RATE);
+    private BigDecimal calcRate(ScoringData data, LoanProperties props) {
+        BigDecimal rate = new BigDecimal(props.getGlobalRate());
         Employment employment = data.getEmployment();
 
         if (data.getIsInsuranceEnabled()) {
@@ -137,14 +124,14 @@ public class CreditServiceImpl implements CreditService {
 
         switch (data.getGender()) {
             case MALE -> {
-                if (userIsOlder(MIN_MAN_AGE_FOR_SPECIAL_RATE, data.getBirthday())
-                    && userIsYounger(MAX_MAN_AGE_FOR_SPECIAL_RATE,data.getBirthday())) {
+                if (userIsOlder(props.getMinManAgeForSpecialRate(), data.getBirthday())
+                    && userIsYounger(props.getMaxManAgeForSpecialRate(), data.getBirthday())) {
                     rate = rate.subtract(new BigDecimal(3));
                 }
             }
             case FEMALE -> {
-                if (userIsOlder(MIN_WOMAN_AGE_FOR_SPECIAL_RATE, data.getBirthday())
-                        && userIsYounger(MAX_WOMAN_AGE_FOR_SPECIAL_RATE,data.getBirthday())) {
+                if (userIsOlder(props.getMinWomanAgeForSpecialRate(), data.getBirthday())
+                        && userIsYounger(props.getMaxWomanAgeForSpecialRate(), data.getBirthday())) {
                     rate = rate.subtract(new BigDecimal(3));
                 }
             }
@@ -154,13 +141,13 @@ public class CreditServiceImpl implements CreditService {
     }
 
     private List<LoanPaymentSchedule> calcPaymentSchedules(
-            Integer term, BigDecimal amount, BigDecimal rate, BigDecimal monthlyPayment) {
+            Integer term, BigDecimal amount, BigDecimal rate, BigDecimal monthlyPayment, LoanProperties props) {
 
         Integer id = 1;
         List<LoanPaymentSchedule> LoanPaymentScheduleList = new ArrayList<>();
 
         GregorianCalendar date = new GregorianCalendar();
-        date.set(Calendar.DAY_OF_MONTH, MONTHLY_PAYMENT_START_DAY);
+        date.set(Calendar.DAY_OF_MONTH, props.getMonthlyPaymentStartDay());
         date.add(Calendar.MONTH, 1);
 
         BigDecimal remainingDebt = amount;
