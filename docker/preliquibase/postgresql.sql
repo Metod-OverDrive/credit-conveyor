@@ -1,0 +1,2 @@
+CREATE SCHEMA IF NOT EXISTS loan_properties;
+CREATE SCHEMA IF NOT EXISTS credit_conveyor;
