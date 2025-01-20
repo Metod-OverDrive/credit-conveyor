@@ -56,7 +56,7 @@ public class CreditServiceImpl implements CreditService {
         return credit;
     }
 
-    private void checkRejectReasons(ScoringData data, LoanProperties props) {
+    public void checkRejectReasons(ScoringData data, LoanProperties props) {
         Employment employment = data.getEmployment();
         LocalDate birthday = data.getBirthday();
 
@@ -85,13 +85,13 @@ public class CreditServiceImpl implements CreditService {
         }
     }
 
-    private void rejectApplication(String reason) {
+    public void rejectApplication(String reason) {
         String rejectReason = REJECT_APPLICATION + reason;
         log.info(rejectReason);
         throw new RejectApplicationException(rejectReason);
     }
 
-    private BigDecimal calcRate(ScoringData data, LoanProperties props) {
+    public BigDecimal calcRate(ScoringData data, LoanProperties props) {
         BigDecimal rate = new BigDecimal(props.getGlobalRate());
         Employment employment = data.getEmployment();
 
@@ -140,7 +140,7 @@ public class CreditServiceImpl implements CreditService {
         return rate;
     }
 
-    private List<LoanPaymentSchedule> calcPaymentSchedules(
+    public List<LoanPaymentSchedule> calcPaymentSchedules(
             Integer term, BigDecimal amount, BigDecimal rate, BigDecimal monthlyPayment, LoanProperties props) {
 
         Integer id = 1;
@@ -197,14 +197,14 @@ public class CreditServiceImpl implements CreditService {
             .toList();
     }
 
-    private BigDecimal calcTotalAmount(List<LoanPaymentSchedule> LoanPaymentScheduleList) {
+    public BigDecimal calcTotalAmount(List<LoanPaymentSchedule> LoanPaymentScheduleList) {
         return LoanPaymentScheduleList.stream()
                 .map(LoanPaymentSchedule::getPayment)
                 .reduce(BigDecimal::add)
                 .orElseThrow();
     }
 
-    private BigDecimal calculatePsk(BigDecimal totalAmount, BigDecimal amount, Integer term) {
+    public BigDecimal calculatePsk(BigDecimal totalAmount, BigDecimal amount, Integer term) {
         return ((totalAmount
                 .divide(amount, 5, RoundingMode.HALF_UP))
                 .subtract(new BigDecimal(1)))
@@ -216,9 +216,9 @@ public class CreditServiceImpl implements CreditService {
     }
 
     private BigDecimal calculateInterestPayment(
-            BigDecimal remainingDebt, BigDecimal finalRate, BigDecimal daysOfMonth, BigDecimal daysOfYear) {
+            BigDecimal remainingDebt, BigDecimal rate, BigDecimal daysOfMonth, BigDecimal daysOfYear) {
         return remainingDebt
-                .multiply(finalRate)
+                .multiply(rate)
                 .multiply(new BigDecimal("0.01"))
                 .multiply(daysOfMonth)
                 .divide(daysOfYear, 2, RoundingMode.HALF_EVEN);

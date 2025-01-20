@@ -10,6 +10,9 @@ import java.time.LocalDate;
 @Getter
 @Setter
 @ToString
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @EqualsAndHashCode
 public class ScoringData {
 
